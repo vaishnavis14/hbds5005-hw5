@@ -1,0 +1,312 @@
+---
+title: "Homework 5"
+author: "Vaishnavi Sathiyamoorthy"
+date: "2024-10-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+## Question 1. Sampling distribution for the sample variance: part I
+IQ tests are designed to have a mean of 100 and a standard deviation of 15. In addition, they have a normal distribution. Suppose we take a random sample from a normal population with mean μ = 100 and standard deviation of σ = 15. We are interested in estimating the population variance, which we will do using the sample variance. Specifically, we will take a sample of size n from the normal population of values (N(μ = 100, σ = 15)). We are interested in the sampling distribution of the population variance. Be careful, we are estimating the sample variance or σ2 (not the standard deviation).
+
+### Question 1a.
+Simulated sampling distribution for the sample variance of 20 observations. What is the sampling distribution for the sample variance of 20 observations based on 10000 simulations? Generate the histogram and overlay a density plot on it. Does it appear to be normally distributed? Note that The sample size of interest is 20.
+
+#### Solution
+```{r}
+set.seed(123)
+sample_variances <- replicate(10000, {
+  sample <- rnorm(20, mean = 100, sd = 15)
+  var(sample)
+})
+
+ggplot(data.frame(sample_variances), aes(x = sample_variances)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black", fill = "pink") +
+  geom_density() +
+  labs(title = "Sampling Distribution of Sample Variance",
+       x = "Sample Variance", y = "Density") +
+  theme_minimal()
+
+```
+
+This variance looks right skewed. 
+
+### Question 1b.
+Normal or not? Let’s see whether the sampling distribution can be described as normal or not. To do this, plot in the same graph the density of the simulated sampling distribution for the sample variance of 20 observations obtained in 1a, and a normal density that has the mean of the sampling distribution in 1a and the standard deviation of the sampling distribution in 1a. (Use dnorm to plot the normal density.) Does it appear as though the sampling distribution for the sample variance from a normal population is normal? Explain.
+
+#### Solution
+```{r}
+ggplot(data.frame(sample_variances), aes(x = sample_variances)) +
+  geom_histogram(aes(y = ..density..), bins = 30, color = "black", fill = "pink") +
+  geom_density() +
+  stat_function(fun = dnorm, args = list(mean = mean(sample_variances), sd = sd(sample_variances)), 
+                color = "green", size = 1, linetype = "dashed") +
+  labs(title = "Sampling Distribution of Sample Variance",
+       x = "Sample Variance", y = "Density") +
+  theme_minimal()
+```
+
+It appears that the dotted green line is shifted slightly to the right compared to the density line from the sample variances.
+
+### Question 1c.
+qq plot. Let’s check whether the estimated sampling distribution of the sample variance is normal by comparing our simulated sampling distribution for the sample variance to a normal distribution using qqnorm and adding a line using qqline(). Does it appear as though the sampling distribution for the sample variance is normally distributed? Explain.
+
+#### Solution
+```{r}
+qqnorm(sample_variances, main = "QQ Plot of Simulated Sample Variances")
+qqline(sample_variances, col = "red", lwd = 2)
+```
+
+It does not appear that the sample distribution is normally distributed because the data points are curved, but the line is straight.
+
+### Question 1d.
+Larger sample size. Perhaps the problem is that the sample size is too small. Let’s try a larger sample size, say 175. Generate the sampling distribution for the sample variance based on a sample size of 175 (do 10000 simulated samples) and generate the normal q-q plot as done in Question 1c. Does this distribution appear to be normally distributed? 
+
+#### Solution
+```{r}
+set.seed(123)
+sample_variances_175 <- replicate(10000, {
+  sample <- rnorm(175, mean = 100, sd = 15)
+  var(sample)
+})
+
+qqnorm(sample_variances_175, main = "QQ Plot of Simulated Sample Variances")
+qqline(sample_variances_175, col = "red", lwd = 2)
+```
+
+This appears to be normally distributed. The datapoints are mostly along the line.
+
+## Question 2. Sampling distribution for the sample variance: part II
+It turns out that the sampling distribution for the sample variance is not normal and is right skewed. In general, when samples of size n are taken from a normal distribution with variance σ2, the sampling distribution of (n−1)s2 σ2 has a χ2 (e.g. chi-square) distribution with n − 1 degrees of freedom. s2 is the sample variance and is computed as s2 = ∑n i=1(xi −  ̄x)2/(n − 1) (i.e. computed from the sample and used to estimate σ2). The χ2 distribution has one parameter called the degrees of freedom (df). The sampling distribution of the rescaled sample variance distribution is used to make inferences about the population variance. Note that this estimate is only good if the true population values are normally distributed. If they are not, then the sampling distribution for the sample variance is not as indicated. Due to the non-robustness of this sampling distribution, inferences for population variances are often invalid. We will not study inferences of a population variance (i.e. confidence intervals and tests of significance) in this course. Let’s suppose we have a sample of size n = 20 from a N(μ = 1000, σ = 15) distribution. This means that the sampling distribution for 19s2 225 would be a χ2(19) distribution (that is a chi-square distribution with df = 19).
+
+### Question 2a.
+Plot the χ2 distribution with df = 19 (use dchisq).
+
+#### Solution
+```{r}
+x <- seq(0, 50, length.out = 1000)
+y <- dchisq(x, 19)
+
+# Plot the chi-square distribution
+plot(x, y, type = "l", col = "blue", lwd = 2,
+     main = "Chi-square Distribution with df = 19",
+     xlab = "x", ylab = "Density")
+
+```
+
+### Question 2b.
+Simulate a sampling distribution for the rescaled sample variance. Find the sampling distribution of 19s2/225 based on a sample size of 20. Simulate 10000 random samples from N(100, 15) of size 20. For each sample, compute (19*sample variance)/225 (the denominator is 152). Plot the histogram of this sampling distribution for the rescaled variance, overlay the density of the sampling distribution, and overlay a χ2 distribution with df = 19.
+
+#### Solution
+```{r}
+sample_variances <- numeric(10000)
+for (i in 1:10000) {
+  sample <- rnorm(20, mean = 1000, sd = 15)
+  sample_variance <- var(sample) 
+  rescaled_variance <- (19 * sample_variance) / 225
+  sample_variances[i] <- rescaled_variance
+}
+data <- data.frame(rescaled_variance = sample_variances)
+ggplot(data, aes(x = rescaled_variance)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "gray", alpha = 0.5) +
+  geom_density(color = "blue", size = 1) +
+  stat_function(fun = dchisq, args = list(df = 19), color = "red", size = 1) +
+  labs(title = "Sampling Distribution of Rescaled Sample Variance",
+       x = "(19 * Sample Variance) / 225",
+       y = "Density") +
+  theme_minimal() +
+  theme(legend.position = "top") +
+  scale_color_manual(values = c("Simulated Distribution" = "gray", 
+                                 "Density" = "blue", 
+                                 "Chi-square df=19" = "red"))
+
+```
+
+## Question 3. CLT applied to a sample from a Beta distribution
+
+### Question 3a.
+Plot the beta distribution with α = 4 and β = 2 (use dbeta).
+
+#### Solution
+```{r}
+options(scipen = 999)
+x <- seq(0, 1, length.out = 1000)
+y <- dbeta(x, shape1 = 4, shape2 = 2)
+plot(x, y, type = "l", col = "blue", lwd = 2,
+     main = "Beta Distribution (α = 4 , β = 2)",
+     xlab = "x", ylab = "Density")
+```
+
+### Question 3b.
+Simulate the sampling distribution for the sample mean (n = 5). Simulate the sampling distribution for the sample mean based on 5 observations from the beta distribution with α = 4 and β = 2. Make a histogram of the sampling distribution of the mean and overlay the density of an approximate normal distribution with the mean μ and standard deviation σ√n . (Use 10000 random samples for your simulation.)
+
+#### Solution
+```{r}
+set.seed(123) 
+sample_means <- replicate(10000, mean(rbeta(5, 4, 2)))
+mu <- 4 / (4 + 2)
+sigma <- sqrt((2) / ((4 + 2)^2 * (4 + 2 + 1)))
+
+hist(sample_means, breaks = 50, probability = TRUE, main = "Sampling Distribution of Sample Mean",
+     xlab = "Sample Mean", col = "lightblue", border = "black")
+
+# Overlay the density of the normal distribution
+curve(dnorm(x, mean = mu, sd = sigma / sqrt(4)), col = "red", lwd = 2, add = TRUE)
+
+# Add legend
+legend("topright", legend = c("Normal Density"), col = "red", lwd = 2)
+```
+
+### Question 3c.
+Comment on how good the normal approximation appears to be with respect to the sampling distribution of the sample mean based on 5 observations from a beta distribution with α = 4 and β = 2.
+
+#### Solution
+The normal approximation and the sampling distribution seem to have the same mean. However, the distribution is wider for the sampling distribution compared to the normal approximation.
+
+### Question 3d.
+Simulate the sampling distribution for the sample mean (n=30). Simulate the sampling distribution for the sample mean based on 30 observations from the beta distribution with α = 4 and β = 2. Make a histogram of the sampling distribution of the mean and overlay the density of a normal distribution with the mean μ and standard deviation σ√n . (Use 10000 random samples for your simulation.)
+
+#### Solution
+```{r}
+set.seed(123) 
+sample_means <- replicate(10000, mean(rbeta(30, 4, 2)))
+mu <- 4 / (4 + 2)
+sigma <- sqrt((2) / ((4 + 2)^2 * (4 + 2 + 1)))
+
+hist(sample_means, breaks = 50, probability = TRUE, main = "Sampling Distribution of Sample Mean",
+     xlab = "Sample Mean", col = "lightblue", border = "black")
+
+# Overlay the density of the normal distribution
+curve(dnorm(x, mean = mu, sd = sigma / sqrt(4)), col = "red", lwd = 2, add = TRUE)
+
+# Add legend
+legend("topright", legend = c("Normal Density"), col = "red", lwd = 2)
+```
+
+### Question 3e.
+Comment on how good the normal approximation appears to be with respect to the sampling distribution of the sample mean based on 30 observations from a beta distribution with α = 4 and β = 2.
+
+#### Solution
+The normal approximation seems to be wider than the sampling distribution. The mean is the same between the two.
+
+## Question 4. Gestation times
+The duration of gestation in healthy humans is approximately 280 days with a standard deviation of 10 days. Assume that the gestation times are normally distributed. Suppose a researcher takes a random sample of 50 new mothers and determines the average gestation time.
+
+### Question 4a.
+What is the chance that the gestation time of one of the randomly selected women will be greater than or equal to 282 days?
+
+#### Solution
+```{r}
+1 - pnorm(282, mean = 280, sd = 10)
+```
+
+### Question 4b.
+What is the chance that the average gestation time of 50 women is greater than or equal to 282 days?
+
+#### Solution
+```{r}
+standard_error <- 10 / sqrt(50)
+1 - pnorm(282, mean = 280, sd = standard_error)
+```
+
+### Question 4c.
+Suppose the researchers determined that the average gestation period of 50 women who gave birth in July was 275 days. Perform a hypothesis test to see if July is different (report the H0, Ha, p-value, and conclusion).
+
+#### Solution
+H0: μ = 280
+Ha: μ ≠ 280
+
+```{r}
+z <- -5 / standard_error
+2 * pnorm(abs(z), lower.tail = FALSE)
+```
+
+Since p = 0.0004, we reject the null hypothesis. We can conclude that the average gestation period of women who gave birth in July is different than 280 days.
+
+## Question 5. Data analysis of means: Quality of care and payment
+Policy makers are interested in the relationship between what a hospital is paid by Medicare and the quality care that it delivers as well as the type of hospitalizations. The data they want to use is a subset of data from Data.Medicare.gov. The data are in “PaymentAndValue.csv”. The data dictionary for the data is:
+• Facility ID CMS’s Certification Number (CCN) for the hospital
+• State the hospital’s state
+• Hospitalization type reason patient was hospitalized
+• Payment comparison indication whether payment received for hospitalization is greater than (Greater, less than (Less), or no different (No Different) than the national average)
+• Denominator total number of eligible in-hospital stays (indication of hospital volume)
+• Payment average hospital risk-standardized payment from Medicare
+• Quality of care indication of the hospital’s performance in terms of mortality or complications: better, average or worse
+
+### Question 5a.
+Make a histogram of the payments received by hospitals for hip/knee replacements. Describe the distribution (mean, spread, shape).
+
+#### Solution
+```{r}
+df <- read_csv("PaymentAndValue.csv")
+df %>% filter(`Hospitalization type` == "hip/knee replacement") %>% summarize(mean(Payment))
+df %>% filter(`Hospitalization type` == "hip/knee replacement") %>% summarize(sd(Payment))
+df %>% filter(`Hospitalization type` == "hip/knee replacement") %>%
+  ggplot(aes(x = Payment)) +
+  geom_histogram(color = "black", fill = "pink") +
+  labs(title = "Distribution of Payments for Hip/Knee Replacements",
+       x = "Payments ($)",
+       y = "Counts") +
+  theme_minimal()
+```
+
+The mean cost of payments for hip/knee replacement is $20,833.44. The standard deviation is \$2,454.48. The distribution of the cost is right skewed.
+
+### Question 5b.
+Report the point estimate of the mean payment and the corresponding 95% confidence interval for hip/knee replacements.
+
+#### Solution
+```{r}
+df %>% filter(`Hospitalization type` == "hip/knee replacement") %>% summarize(mean(Payment))
+t.test(df[df$`Hospitalization type` == "hip/knee replacement", ]$Payment, conf.level = 0.95)
+```
+
+The 95% confidence interval for payments for hip/knee replacement is between $20,740.77 and \$20.926.12.
+
+### Question 5c.
+Test of significance. The average payment received by a hospital for a hip/knee replacement in the previous year was $20,600. Perform a significance test to determine whether the mean payment for a hip/knee replacement differs for this year compared to the previous year. Report your null and alternative hypotheses, the value of the test statistic, the p-value, and your conclusion (use sentences in reporting your conclusion).
+
+#### Solution
+H0 = $20,600
+Ha ≠ $20,600
+```{r}
+t.test(df[df$`Hospitalization type` == "hip/knee replacement", ]$Payment, mu = 20600, alternative = "two.sided", conf.level = 0.95)
+```
+
+Since p < 0.05, we can reject the null hypothesis. We can conclude that the mean cost of hip/knee replacement is different this year compared to last year.
+
+### Question 5d.
+Make side-by-side boxplots for the payments by the different hospitalization types. Describe what you see.
+
+#### Solution
+```{r}
+df %>% ggplot(aes(x = `Hospitalization type`, y = Payment)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Payments Based on Hospitalization Types") +
+  theme_minimal()
+```
+
+The distribution of costs for heart attacks and hip/knee replacements are higher than the costs for heart failure and pneumonia.
+
+### Question 5e.
+Comparison of pneumonia and heart failure payments. Report the point estimates and 99% confidence intervals for the average payment for heart failure hospitalizations and pneumonia hospitalizations. Is there evidence that the average payments differ? Explain.
+
+#### Solution
+```{r}
+df %>% filter(`Hospitalization type` == "heart failure") %>% summarize(mean(Payment))
+df %>% filter(`Hospitalization type` == "pneumonia") %>% summarize(mean(Payment))
+t.test(df[df$`Hospitalization type` == "heart failure", ]$Payment, 
+       df[df$`Hospitalization type` == "pneumonia", ]$Payment, 
+       var.equal = TRUE, 
+       conf.level = 0.99)
+```
+
+The point estimate for average payments for heart failure is $17,681.78. The point estimate for average payments for pneumonia is \$18,292.28. The 99% confidence interval for the difference in cost is between \$718.28 and \$502.53. Since p < 0.01, we reject the null hypothesis. We can conclude that the average payments differ between heart failure and pneumonia.
+
